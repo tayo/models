@@ -4,6 +4,8 @@ set -e
 # Example settings:
 # export TPU="taylorrobie-tpu-0"
 # export BUCKET="gs://taylorrobie-tpu-test-bucket-2"
+export TPU="tayo-tpuv3"
+export BUCKET="gs://tayo_datasets"
 
 # Remove IDE "not assigned" warning highlights.
 TPU=${TPU:-""}

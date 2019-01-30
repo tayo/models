@@ -40,7 +40,8 @@ python "${SCRIPT_DIR}/../datasets/movielens.py" --data_dir ${DATA_DIR} --dataset
 
 {
 
-for i in `seq 0 4`;
+for i in `seq 0 0`;
+#for i in `seq 0 4`;
 do
   START_TIME=$(date +%s)
   MODEL_DIR="${TEST_DIR}/model_dir_${i}"

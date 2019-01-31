@@ -188,6 +188,10 @@ def main(_):
 
 def run_ncf(_):
   """Run NCF training and eval loop."""
+
+  tf.logging.info("Beginning run_ncf..")
+  tf.logging.info("About to download data..")
+
   if FLAGS.download_if_missing and not FLAGS.use_synthetic_data:
     movielens.download(FLAGS.dataset, FLAGS.data_dir)
 
@@ -196,6 +200,8 @@ def run_ncf(_):
 
   params = parse_flags(FLAGS)
   total_training_cycle = FLAGS.train_epochs // FLAGS.epochs_between_evals
+
+  tf.logging.info("About to instantiate pipeline")
 
   if FLAGS.use_synthetic_data:
     producer = data_pipeline.DummyConstructor()

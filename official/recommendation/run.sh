@@ -41,7 +41,6 @@ python "${SCRIPT_DIR}/../datasets/movielens.py" --data_dir ${DATA_DIR} --dataset
 {
 
 for i in `seq 0 0`;
-#for i in `seq 0 4`;
 do
   START_TIME=$(date +%s)
   MODEL_DIR="${TEST_DIR}/model_dir_${i}"
@@ -59,6 +58,9 @@ do
   # To reduce variation set the seed flag:
   #   --seed ${i}
 
+# Try constructor_type=materialized..
+  #batch_s=98304  #eval_batch_s=160000
+
   python -u "${SCRIPT_DIR}/ncf_main.py" \
       --model_dir ${MODEL_DIR} \
       --data_dir ${DATA_DIR} \
@@ -66,8 +68,8 @@ do
       ${DEVICE_FLAG} \
       --clean \
       --train_epochs 14 \
-      --batch_size 98304 \
-      --eval_batch_size 160000 \
+      --batch_size 1024 \
+      --eval_batch_size 12000 \
       --learning_rate 0.00382059 \
       --beta1 0.783529 \
       --beta2 0.909003 \
@@ -75,6 +77,8 @@ do
       --layers 256,256,128,64 --num_factors 64 \
       --hr_threshold 0.635 \
       --ml_perf \
+      --nouse_permutation \
+      --custom_cache_file="/tmp/transformed_10k_not_cPkl.pkl" \
  |& tee ${RUN_LOG} \
  | grep --line-buffered  -E --regexp="(Iteration [0-9]+: HR = [0-9\.]+, NDCG = [0-9\.]+, Loss = [0-9\.]+)|(pipeline_hash)|(MLPerf time:)"
 

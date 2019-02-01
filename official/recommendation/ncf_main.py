@@ -142,7 +142,7 @@ def log_and_get_hooks(eval_batch_size):
 def parse_flags(flags_obj):
   """Convenience function to turn flags into params."""
   num_gpus = flags_core.get_num_gpus(flags_obj)
-  num_devices = FLAGS.num_tpu_shards if FLAGS.tpu else num_gpus or 1
+  num_devices = flags_obj.num_tpu_shards if flags_obj.tpu else num_gpus or 1
 
   batch_size = (flags_obj.batch_size + num_devices - 1) // num_devices
 
@@ -173,9 +173,9 @@ def parse_flags(flags_obj):
       "epsilon": flags_obj.epsilon,
       "match_mlperf": flags_obj.ml_perf,
       "use_xla_for_gpu": flags_obj.use_xla_for_gpu,
-      "epochs_between_evals": FLAGS.epochs_between_evals,
-      "use_permutation": FLAGS.use_permutation,
-      "custom_cache_file": FLAGS.custom_cache_file,
+      "epochs_between_evals": flags_obj.epochs_between_evals,
+      "use_permutation": flags_obj.use_permutation,
+      "custom_cache_file": flags_obj.custom_cache_file,
   }
 
 
@@ -189,10 +189,7 @@ def main(_):
 def run_ncf(_):
   """Run NCF training and eval loop."""
 
-  tf.logging.info("Beginning run_ncf..")
-  tf.logging.info("About to download data..")
-
-  if FLAGS.download_if_missing and not FLAGS.use_synthetic_data:
+  if FLAGS.download_if_missing and not FLAGS.use_synthetic_data and FLAGS.custom_cache_file is None:
     movielens.download(FLAGS.dataset, FLAGS.data_dir)
 
   if FLAGS.seed is not None:
@@ -201,15 +198,15 @@ def run_ncf(_):
   params = parse_flags(FLAGS)
   total_training_cycle = FLAGS.train_epochs // FLAGS.epochs_between_evals
 
-  tf.logging.info("About to instantiate pipeline")
-
   if FLAGS.use_synthetic_data:
+    tf.logging.info("Synthetic data..")
     producer = data_pipeline.DummyConstructor()
     num_users, num_items = data_preprocessing.DATASET_TO_NUM_USERS_AND_ITEMS[
         FLAGS.dataset]
     num_train_steps = rconst.SYNTHETIC_BATCHES_PER_EPOCH
     num_eval_steps = rconst.SYNTHETIC_BATCHES_PER_EPOCH
   else:
+    tf.logging.info("Instantiating data pipeline..")
     num_users, num_items, producer = data_preprocessing.instantiate_pipeline(
         dataset=FLAGS.dataset, data_dir=FLAGS.data_dir, params=params,
         constructor_type=FLAGS.constructor_type,

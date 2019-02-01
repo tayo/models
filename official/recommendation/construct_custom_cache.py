@@ -21,16 +21,40 @@ from __future__ import print_function
 
 import collections
 import os
+#import cPickle as pickle
 import pickle
 import time
 
+# pylint: disable=g-bad-import-order
 import numpy as np
+from absl import app as absl_app
+from absl import flags
+import tensorflow as tf
+# pylint: enable=g-bad-import-order
 
 from official.recommendation import constants as rconst
 
+FLAGS = flags.FLAGS
+
+flags.DEFINE_string(
+    name="raw_data_path",
+    default="/tmp/ml_extended/16_32_ext_user_item_sequences.pkl",
+    help="Path to data positives.")
+
+flags.DEFINE_string(
+    name="output_dir",
+    default="/tmp/",
+    help="Directory for storing output custom cache.")
+
+flags.DEFINE_integer(
+    name="max_positive_count",
+    default=int(1e12),
+    help="Maximum number of elements to consider.")
+
+
 
 def pkl_iterator(path, max_count):
-  with open(path, "rb") as f:
+  with tf.gfile.Open(path, "rb") as f:
     count = 0
     user_id = -1
     while True:
@@ -53,11 +77,14 @@ def pkl_iterator(path, max_count):
         break
 
 
-def main(raw_path, max_count=int(1e15)):
+def main(_):
   item_counts = collections.defaultdict(int)
   user_id = -1
   print("Starting precompute pass.")
-  for user_id, items in enumerate(pkl_iterator(raw_path, max_count)):
+  for user_id, items in enumerate(
+      pkl_iterator(
+        FLAGS.raw_data_path,
+        FLAGS.max_positive_count)):
     for i in items:
       item_counts[i] += 1
 
@@ -87,7 +114,8 @@ def main(raw_path, max_count=int(1e15)):
   np.random.seed(0)
   start_ind = 0
   print("Starting second pass.")
-  for user_id, items in enumerate(pkl_iterator(raw_path, max_count)):
+  for user_id, items in enumerate(pkl_iterator(FLAGS.raw_data_path,
+        FLAGS.max_positive_count)):
     items = [item_map[i] for i in items]
 
     # randomly choose an item to be the holdout item
@@ -116,11 +144,11 @@ def main(raw_path, max_count=int(1e15)):
   }
 
   print("Writing record.")
-  output_path = os.path.join(os.path.split(raw_path)[0], "transformed.pkl")
-  with open(output_path, "wb") as f:
+  output_path = os.path.join(FLAGS.output_dir, "transformed.pkl")
+  with tf.gfile.Open(output_path, "wb") as f:
     pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 if __name__ == "__main__":
-  main("/tmp/ml_extended/16_32_ext_user_item_sequences.pkl", int(1e6))
+  absl_app.run(main)
 

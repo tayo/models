@@ -403,7 +403,7 @@ class BaseDataConstructor(threading.Thread):
       self._shard_root = None
 
     self._train_dataset = DatasetManager(
-        is_training=True, stream_files, self.train_batches_per_epoch,
+        True, stream_files, self.train_batches_per_epoch,
         self._shard_root, deterministic)
     self._eval_dataset = DatasetManager(
         False, stream_files, self.eval_batches_per_epoch, self._shard_root,

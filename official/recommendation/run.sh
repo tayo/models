@@ -35,8 +35,8 @@ else
   DEVICE_FLAG="--tpu ${TPU} --num_gpus 0"
 fi
 
-DATA_DIR="${ROOT_DIR}/movielens_data"
-python "${SCRIPT_DIR}/../datasets/movielens.py" --data_dir ${DATA_DIR} --dataset ${DATASET}
+#DATA_DIR="${ROOT_DIR}/movielens_data"
+#python "${SCRIPT_DIR}/../datasets/movielens.py" --data_dir ${DATA_DIR} --dataset ${DATASET}
 
 {
 
@@ -61,7 +61,9 @@ do
 # Try constructor_type=materialized..
   #batch_s=98304  #eval_batch_s=160000
 
-  python -u "${SCRIPT_DIR}/ncf_main.py" \
+#python -u "${SCRIPT_DIR}/ncf_main.py" \
+
+  python3 -u "${SCRIPT_DIR}/ncf_main.py" \
       --model_dir ${MODEL_DIR} \
       --data_dir ${DATA_DIR} \
       --dataset ${DATASET} --hooks "" \
@@ -78,7 +80,7 @@ do
       --hr_threshold 0.635 \
       --ml_perf \
       --nouse_permutation \
-      --custom_cache_file="/tmp/transformed_10k_not_cPkl.pkl" \
+      --custom_cache_file="/tmp/transformed_10k_py3.pkl" \
  |& tee ${RUN_LOG} \
  | grep --line-buffered  -E --regexp="(Iteration [0-9]+: HR = [0-9\.]+, NDCG = [0-9\.]+, Loss = [0-9\.]+)|(pipeline_hash)|(MLPerf time:)"
 

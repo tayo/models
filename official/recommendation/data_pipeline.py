@@ -191,13 +191,42 @@ class DatasetManager(object):
     }
 
   def put(self, fpath):
+    # For the streaming files case:  A set of files (one per batch)
+    # has been written to local disk in serialized MMAP form (see
+    # rconst.BATCH_FILE_DIR). /tmp/ncf_mmap_cache/serialized_batches
+
+    # Read about dataframes and their representation as python dicts, to see
+    # what the actual data looks like.
+
+    # TODO(tayo): Actually do the write to each file on disk.
+    #  Only one file is written per batch. I actually need 16 (or
+    #  rconst.NUM_FILE_SHARDS) files to be written in the batch_to_file
+    #  function.
+
+    # Zeroth trial? Ignore this function and write directly in the batch_to_file
+    # function
+
+    # First trial: Only write one file (shard number 0). Test for
+    # functionality.
+    
+    # Then move to sharding the batch_to_file -- Mandate that batch_size %
+    # NUM_FILE_SHARDS == 0.  Then just write batch_size/num_shards elems to each
+    # of the num_shards files.
+
     if self._stream_files:
-      raise NotImplementedError("Shared file writers have not been migrated in "
-                                "this prototype.")
+      with tf.gfile.Open(fpath, "rb") as f:
+        data_buf = f.read()
+        self._writers.write(data_buf)
+
+      #for in range(rconst.NUM_FILE_SHARDS)
+
+      #raise NotImplementedError("Shared file writers have not been migrated in "
+      #                          "this prototype.")
 
     return self._result_queue.put(fpath)
 
   def start_construction(self):
+    # Create the epoch's data directory and initialize the writers.
     if self._stream_files:
       tf.gfile.MakeDirs(self.current_data_root)
       template = os.path.join(self.current_data_root, rconst.SHARD_TEMPLATE)
@@ -208,6 +237,7 @@ class DatasetManager(object):
     if self._stream_files:
       [writer.close() for writer in self._writers]
       self._writers = []
+      # {dir}/xyz/training_cycle_N
       self._result_queue.put(self.current_data_root)
 
     self._epochs_completed += 1
@@ -245,7 +275,7 @@ class DatasetManager(object):
           yield result
 
 
-  def get_dataset(self, batch_size, epochs_between_evals):
+  def get_dataset(self, batch_size, epochs_between_evals, params):
     """Construct the dataset to be used for training and eval.
 
     For local training, data is provided through Dataset.from_generator. For
@@ -256,11 +286,24 @@ class DatasetManager(object):
       batch_size: The per-device batch size of the dataset.
       epochs_between_evals: How many epochs worth of data to yield.
         (Generator mode only.)
+      params: Job params which contain necessary worker identification info.
     """
     self._epochs_requested += 1
     if self._stream_files:
-      raise NotImplementedError("StreamingFilesDataset has been removed from "
-                                "this prototype.")
+      # TODO(tayo): Simply instantiate a StreamingFilesDataset pointing to the
+      # TFRecords that were written in the put() function.
+
+      path_template = os.path.join(self.current_data_root, "shard_*")
+      # Check cloud_tpu/models for example in cloud setting.
+      dataset = StreamingFilesDataset(
+              files=path_template,
+              filetype="tfrecord",
+              worker_job=params["tpu"],
+              num_epochs=1,
+              num_parallel_reads=rconst.NUM_FILE_SHARDS)
+
+      #raise NotImplementedError("StreamingFilesDataset has been removed from "
+      #                          "this prototype.")
 
     else:
       data_generator = functools.partial(
@@ -272,6 +315,7 @@ class DatasetManager(object):
       map_fn = functools.partial(self._deserialize, batch_size=batch_size)
       dataset = dataset.map(map_fn, num_parallel_calls=16)
 
+    # TODO(tayo): Remove the prefetch?
     return dataset.prefetch(16)
 
   def make_input_fn(self, batch_size):
@@ -287,7 +331,8 @@ class DatasetManager(object):
       epochs_between_evals = (params.get("epochs_between_evals", 1)
                               if self._is_training else 1)
       return self.get_dataset(batch_size=batch_size,
-                              epochs_between_evals=epochs_between_evals)
+                              epochs_between_evals=epochs_between_evals,
+                              params=params)
 
     return input_fn
 
@@ -573,6 +618,8 @@ class BaseDataConstructor(threading.Thread):
       return
 
     self._train_dataset.start_construction()
+
+    # Creates one file for each batch
     map_args = ((i, self.lookup_negative_items) for i
                 in range(self.train_batches_per_epoch))
 

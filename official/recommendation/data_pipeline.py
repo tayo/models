@@ -216,7 +216,7 @@ class DatasetManager(object):
     if self._stream_files:
       with tf.gfile.Open(fpath, "rb") as f:
         data_buf = f.read()
-        self._writers.write(data_buf)
+        self._writers[0].write(data_buf)
 
       #for in range(rconst.NUM_FILE_SHARDS)
 
@@ -290,11 +290,11 @@ class DatasetManager(object):
     """
     self._epochs_requested += 1
     if self._stream_files:
-      # TODO(tayo): Simply instantiate a StreamingFilesDataset pointing to the
+      # TODO(tayo): Instantiate a StreamingFilesDataset pointing to the
       # TFRecords that were written in the put() function.
 
       path_template = os.path.join(self.current_data_root, "shard_*")
-      # Check cloud_tpu/models for example in cloud setting.
+
       dataset = StreamingFilesDataset(
               files=path_template,
               filetype="tfrecord",
@@ -302,8 +302,12 @@ class DatasetManager(object):
               num_epochs=1,
               num_parallel_reads=rconst.NUM_FILE_SHARDS)
 
-      #raise NotImplementedError("StreamingFilesDataset has been removed from "
-      #                          "this prototype.")
+      map_fn = functools.partial(self._deserialize, batch_size=batch_size)
+      dataset = dataset.apply(
+          tf.contrib.data.map_and_batch(
+            map_fn,
+            batch_size=batch_size,
+            drop_remainder=True))
 
     else:
       data_generator = functools.partial(
@@ -316,7 +320,8 @@ class DatasetManager(object):
       dataset = dataset.map(map_fn, num_parallel_calls=16)
 
     # TODO(tayo): Remove the prefetch?
-    return dataset.prefetch(16)
+    #return dataset.prefetch(16)
+    return dataset
 
   def make_input_fn(self, batch_size):
     """Create an input_fn which checks for batch size consistency."""

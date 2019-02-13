@@ -80,7 +80,7 @@ do
       --hr_threshold 0.635 \
       --ml_perf \
       --nouse_permutation \
-      --custom_cache_file="/tmp/transformed_10k_py3.pkl" \
+      --custom_cache_file="/tmp/transformed_8M_py3.pkl" \
  |& tee ${RUN_LOG} \
  | grep --line-buffered  -E --regexp="(Iteration [0-9]+: HR = [0-9\.]+, NDCG = [0-9\.]+, Loss = [0-9\.]+)|(pipeline_hash)|(MLPerf time:)"
 

@@ -46,6 +46,11 @@ flags.DEFINE_string(
     default="/tmp/",
     help="Directory for storing output custom cache.")
 
+flags.DEFINE_string(
+    name="output_fn",
+    default="transformed.pkl",
+    help="Filename for the output pkl.")
+
 flags.DEFINE_integer(
     name="max_positive_count",
     default=int(1e12),
@@ -144,7 +149,7 @@ def main(_):
   }
 
   print("Writing record.")
-  output_path = os.path.join(FLAGS.output_dir, "transformed.pkl")
+  output_path = os.path.join(FLAGS.output_dir, FLAGS.output_fn)
   with tf.gfile.Open(output_path, "wb") as f:
     pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
 

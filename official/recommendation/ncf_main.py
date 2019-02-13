@@ -142,7 +142,7 @@ def log_and_get_hooks(eval_batch_size):
 def parse_flags(flags_obj):
   """Convenience function to turn flags into params."""
   num_gpus = flags_core.get_num_gpus(flags_obj)
-  num_devices = FLAGS.num_tpu_shards if FLAGS.tpu else num_gpus or 1
+  num_devices = num_devices = flags_obj.num_tpu_shards if flags_obj.tpu else num_gpus or 1
 
   batch_size = (flags_obj.batch_size + num_devices - 1) // num_devices
 
@@ -173,7 +173,9 @@ def parse_flags(flags_obj):
       "epsilon": flags_obj.epsilon,
       "match_mlperf": flags_obj.ml_perf,
       "use_xla_for_gpu": flags_obj.use_xla_for_gpu,
-      "epochs_between_evals": FLAGS.epochs_between_evals,
+      "epochs_between_evals": flags_obj.epochs_between_evals,
+      "use_permutation": flags_obj.use_permutation,
+      "custom_cache_file": flags_obj.custom_cache_file,
   }
 
 
@@ -186,7 +188,7 @@ def main(_):
 
 def run_ncf(_):
   """Run NCF training and eval loop."""
-  if FLAGS.download_if_missing and not FLAGS.use_synthetic_data:
+  if FLAGS.download_if_missing and not FLAGS.use_synthetic_data and FLAGS.custom_cache_file is None:
     movielens.download(FLAGS.dataset, FLAGS.data_dir)
 
   if FLAGS.seed is not None:
@@ -202,6 +204,7 @@ def run_ncf(_):
     num_train_steps = rconst.SYNTHETIC_BATCHES_PER_EPOCH
     num_eval_steps = rconst.SYNTHETIC_BATCHES_PER_EPOCH
   else:
+    tf.logging.info("Instantiating data pipeline..")
     num_users, num_items, producer = data_preprocessing.instantiate_pipeline(
         dataset=FLAGS.dataset, data_dir=FLAGS.data_dir, params=params,
         constructor_type=FLAGS.constructor_type,
@@ -436,6 +439,19 @@ def define_ncf_flags():
   @flags.multi_flags_validator(["use_xla_for_gpu", "tpu"], message=xla_message)
   def xla_validator(flag_dict):
     return not flag_dict["use_xla_for_gpu"] or not flag_dict["tpu"]
+
+  flags.DEFINE_bool(
+      name="use_permutation", default=True, help=flags_core.help_wrap(
+          "Whether to shuffle the dataset, or just randomly select enough "
+          "points. Skipping the permutation is a quick-and-dirty way to bypass "
+          "generating large permutations. "
+          "(Short term hack; not MLPerf compliant.)"))
+
+  flags.DEFINE_string(
+      name="custom_cache_file", default=None, help=flags_core.help_wrap(
+          "The path to a custom cache file. If present data will be taken from "
+          "this file rather than generating a cache file from the dataset "
+          "specification."))
 
 
 if __name__ == "__main__":

@@ -336,7 +336,8 @@ class BaseDataConstructor(threading.Thread):
                eval_batch_size,         # type: int
                batches_per_eval_step,   # type: int
                stream_files,            # type: bool
-               deterministic=False      # type: bool
+               deterministic=False,     # type: bool
+               use_permutation=True     # type: bool
               ):
     # General constants
     self._maximum_number_epochs = maximum_number_epochs
@@ -352,6 +353,7 @@ class BaseDataConstructor(threading.Thread):
     self._eval_pos_users = eval_pos_users
     self._eval_pos_items = eval_pos_items
     self.eval_batch_size = eval_batch_size
+    self._use_permutation = use_permutation
 
     # Training
     if self._train_pos_users.shape != self._train_pos_items.shape:

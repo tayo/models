@@ -75,9 +75,6 @@ def pkl_iterator(path, max_count):
 
         yield x
 
-        if count >= max_count:
-          break
-
       except EOFError:
         break
 

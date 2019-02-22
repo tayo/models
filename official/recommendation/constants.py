@@ -72,6 +72,9 @@ CYCLES_TO_BUFFER = 3  # The number of train cycles worth of data to "run ahead"
 # running more batches reduces noise when measuring the average batches/second.
 SYNTHETIC_BATCHES_PER_EPOCH = 2000
 
+# This was originally 6
+NUM_DATA_GEN_THREADS = 16
+
 # Only used when StreamingFilesDataset is used.
 NUM_FILE_SHARDS = 16
 TRAIN_FOLDER_TEMPLATE = "training_cycle_{}"

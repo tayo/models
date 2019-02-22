@@ -142,7 +142,7 @@ def log_and_get_hooks(eval_batch_size):
 def parse_flags(flags_obj):
   """Convenience function to turn flags into params."""
   num_gpus = flags_core.get_num_gpus(flags_obj)
-  num_devices = num_devices = flags_obj.num_tpu_shards if flags_obj.tpu else num_gpus or 1
+  num_devices = flags_obj.num_tpu_shards if flags_obj.tpu else num_gpus or 1
 
   batch_size = (flags_obj.batch_size + num_devices - 1) // num_devices
 

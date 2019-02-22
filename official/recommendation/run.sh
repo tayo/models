@@ -56,6 +56,13 @@ do
   echo "    ${COMPLIANCE_FILE}"
   echo "    ${STITCHED_COMPLIANCE_FILE}"
 
+  # The previous layers and num_factors were seen to be sufficient.
+  # --layers 256,256,128,64 --num_factors 64 \
+  # --batch_size=98304
+  #   --beta1 0.783529 \
+  #   --beta2 0.909003 \
+  #   --epsilon 1.45439e-07 \
+
   # To reduce variation set the seed flag:
   #   --seed ${i}
 
@@ -66,17 +73,17 @@ do
       ${DEVICE_FLAG} \
       --clean \
       --train_epochs 14 \
-      --batch_size 98304 \
+      --batch_size 4194304 \
       --eval_batch_size 160000 \
       --learning_rate 0.00382059 \
-      --beta1 0.783529 \
-      --beta2 0.909003 \
-      --epsilon 1.45439e-07 \
+      --beta1 0.25 \
+      --beta2 0.5 \
+      --epsilon 1.0e-08 \
       --layers 256,256,128,64 --num_factors 64 \
       --hr_threshold 0.635 \
       --ml_perf \
       --nouse_permutation \
-      --custom_cache_file="/tmp/transformed_8M_py3.pkl" \
+      --custom_cache_file="/tmp/transformed_4_16_correct.pkl" \
  |& tee ${RUN_LOG} \
  | grep --line-buffered  -E --regexp="(Iteration [0-9]+: HR = [0-9\.]+, NDCG = [0-9\.]+, Loss = [0-9\.]+)|(pipeline_hash)|(MLPerf time:)"
 

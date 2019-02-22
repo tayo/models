@@ -204,14 +204,6 @@ def instantiate_pipeline(dataset, data_dir, params, constructor_type=None,
     with tf.gfile.Open(params["custom_cache_file"], "rb") as f:
       raw_data = pickle.load(f)
     user_map, item_map = raw_data["user_map"], raw_data["item_map"]
-
-    tf.logging.info("raw_data type")
-    tf.logging.info(type(raw_data))
-    tf.logging.info("user_map type")
-    tf.logging.info(type(user_map))
-    tf.logging.info("item_map type")
-    tf.logging.info(type(item_map))
-
     num_users = len(user_map)
     num_items = len(item_map)
 

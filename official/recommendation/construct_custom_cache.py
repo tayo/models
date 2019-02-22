@@ -151,7 +151,8 @@ def process_train_files(train_files):
   train_items = np.zeros(shape=num_positives, dtype=rconst.ITEM_DTYPE) - 1
 
   print("Train files: Starting second pass")
-  start_ind = 0
+  abs_pos_idx = 0
+  abs_user_idx = 0
   for tf in train_files:
     print("  Processing train file {}".format(tf))
     elems = pkl_data(tf)
@@ -159,12 +160,13 @@ def process_train_files(train_files):
     assert type(elems[0])==np.ndarray
     for user_id, item_list in enumerate(elems):
       items = [item_map[i] for i in item_list]
-      train_users[start_ind:start_ind + len(items)] = user_id
-      train_items[start_ind:start_ind + len(items)] = np.array(
+      train_users[abs_pos_idx:abs_pos_idx + len(items)] = abs_user_idx + user_id
+      train_items[abs_pos_idx:abs_pos_idx + len(items)] = np.array(
           items, dtype=rconst.ITEM_DTYPE)
-      start_ind += len(items)
+      abs_pos_idx += len(items)
+    abs_user_idx += len(elems)
 
-  assert start_ind == num_positives
+  assert abs_pos_idx == num_positives
   assert not np.any(train_users == -1)
   assert not np.any(train_items == -1)
 

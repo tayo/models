@@ -253,7 +253,15 @@ class DatasetManager(object):
       if epochs_between_evals > 1:
         raise ValueError("epochs_between_evals > 1 not supported for file "
                          "based dataset.")
-      epoch_data_dir = self._result_queue.get(timeout=300)
+
+      start_time = timeit.default_timer() #_T_
+      tf.logging.info("_T_DatasetManager::About to call _result_queue.get()")
+
+      #epoch_data_dir = self._result_queue.get(timeout=300) #_T_
+      epoch_data_dir = self._result_queue.get(timeout=900) #_T_
+
+      tf.logging.info("_T_DatasetManager::Done with _result_queue.get(). Begin stream")
+
       if not self._is_training:
         self._result_queue.put(epoch_data_dir)  # Eval data is reused.
 
@@ -363,8 +371,13 @@ class BaseDataConstructor(threading.Thread):
 
     (self._train_pos_count,) = self._train_pos_users.shape
     self._elements_in_epoch = (1 + num_train_negatives) * self._train_pos_count
+
+
     self.train_batches_per_epoch = self._count_batches(
         self._elements_in_epoch, train_batch_size, batches_per_train_step)
+
+    tf.logging.info("_T_elements_in_epoch={},train_batch_size={},batches_per_train_step={}".format(self._elements_in_epoch, train_batch_size, batches_per_train_step))
+    tf.logging.info("_T_train_batches_per_epoch={}".format(self.train_batches_per_epoch))
 
     # Evaluation
     if eval_batch_size % (1 + rconst.NUM_EVAL_NEGATIVES):
@@ -469,22 +482,40 @@ class BaseDataConstructor(threading.Thread):
       i: The index of the batch. This is used when stream_files=True to assign
         data to file shards.
     """
+    #start_time = timeit.default_timer() #_T_
+
     batch_indices = self._current_epoch_order[i * self.train_batch_size:
                                               (i + 1) * self.train_batch_size]
     (mask_start_index,) = batch_indices.shape
 
     batch_ind_mod = np.mod(batch_indices, self._train_pos_count)
+    #if i%6==0: #_T_
+    #  tf.logging.info("  _T_get_training_batch() Before users gather. Time: {:.1f} seconds".format(
+    #      timeit.default_timer() - start_time))
     users = self._train_pos_users[batch_ind_mod]
 
+    #if i%6==0: #_T_
+    #  tf.logging.info("  _T_get_training_batch() Before negative users generation. Time: {:.1f} seconds".format(
+    #      timeit.default_timer() - start_time))
     negative_indices = np.greater_equal(batch_indices, self._train_pos_count)
     negative_users = users[negative_indices]
 
+    #if i%6==0: #_T_
+    #  tf.logging.info("  _T_get_training_batch() Before negative users lookup. Time: {:.1f} seconds".format(
+    #      timeit.default_timer() - start_time))
     negative_items = self.lookup_negative_items(negative_users=negative_users)
 
+    #if i%6==0: #_T_
+    #  tf.logging.info("  _T_get_training_batch() Before negative item scatter. Time: {:.1f} seconds".format(
+    #      timeit.default_timer() - start_time))
     items = self._train_pos_items[batch_ind_mod]
     items[negative_indices] = negative_items
 
     labels = np.logical_not(negative_indices)
+
+    #if i%6==0: #_T_
+    #  tf.logging.info("  _T_get_training_batch() Before partial batch padding. Time: {:.1f} seconds".format(
+    #      timeit.default_timer() - start_time))
 
     # Pad last partial batch
     pad_length = self.train_batch_size - mask_start_index
@@ -498,6 +529,10 @@ class BaseDataConstructor(threading.Thread):
       users = np.concatenate([users, user_pad])
       items = np.concatenate([items, item_pad])
       labels = np.concatenate([labels, label_pad])
+
+    #if i%6==0: #_T_
+    #  tf.logging.info("  _T_get_training_batch() Before dataset.put(). Time: {:.1f} seconds".format(
+    #      timeit.default_timer() - start_time))
 
     self._train_dataset.put(i, {
         movielens.USER_COLUMN: users,
@@ -517,19 +552,30 @@ class BaseDataConstructor(threading.Thread):
 
   def _construct_training_epoch(self):
     """Loop to construct a batch of training data."""
+    tf.logging.info("_T_construct_training_epoch")
     self._wait_to_construct_train_epoch()
     start_time = timeit.default_timer()
     if self._stop_loop:
       return
 
+    tf.logging.info("_T_Before start_construction. Time: {:.1f} seconds".format(
+
+        timeit.default_timer() - start_time))
     self._train_dataset.start_construction()
+
+    tf.logging.info("_T_train_batches_per_epoch = {}".format(self.train_batches_per_epoch))
+
     map_args = list(range(self.train_batches_per_epoch))
     self._current_epoch_order = next(self._shuffle_iterator)
 
     get_pool = (popen_helper.get_fauxpool if self.deterministic else
                 popen_helper.get_threadpool)
-    with get_pool(6) as pool:
+    tf.logging.info("_T_Before threaded get_training_batch. Time: {:.1f} seconds".format(
+        timeit.default_timer() - start_time))
+    with get_pool(rconst.NUM_DATA_GEN_THREADS) as pool:
       pool.map(self._get_training_batch, map_args)
+    tf.logging.info("_T_Before end_construction. Time: {:.1f} seconds".format(
+        timeit.default_timer() - start_time))
     self._train_dataset.end_construction()
 
     tf.logging.info("Epoch construction complete. Time: {:.1f} seconds".format(
@@ -610,7 +656,7 @@ class BaseDataConstructor(threading.Thread):
 
     get_pool = (popen_helper.get_fauxpool if self.deterministic else
                 popen_helper.get_threadpool)
-    with get_pool(6) as pool:
+    with get_pool(rconst.NUM_DATA_GEN_THREADS) as pool:
       pool.map(self._get_eval_batch, map_args)
     self._eval_dataset.end_construction()
 
@@ -783,8 +829,16 @@ class BisectionDataConstructor(BaseDataConstructor):
     start_time = timeit.default_timer()
     inner_bounds = np.argwhere(self._train_pos_users[1:] -
                                self._train_pos_users[:-1])[:, 0] + 1
+
+    tf.logging.info("_T_After np.argwhere. Time: {:.1f} seconds".format(
+        timeit.default_timer() - start_time))
+
     (upper_bound,) = self._train_pos_users.shape
     self.index_bounds = np.array([0] + inner_bounds.tolist() + [upper_bound])
+
+    tf.logging.info("_T_After self.index_bounds. Time: {:.1f} seconds".format(
+        timeit.default_timer() - start_time))
+
 
     # Later logic will assume that the users are in sequential ascending order.
     assert np.array_equal(self._train_pos_users[self.index_bounds[:-1]],
@@ -792,12 +846,20 @@ class BisectionDataConstructor(BaseDataConstructor):
 
     self._sorted_train_pos_items = self._train_pos_items.copy()
 
+    tf.logging.info("_T_After copy. Time: {:.1f} seconds".format(
+        timeit.default_timer() - start_time))
+
+
     for i in range(self._num_users):
       lower, upper = self.index_bounds[i:i+2]
       self._sorted_train_pos_items[lower:upper].sort()
 
+    tf.logging.info("_T_After sort. Time: {:.1f} seconds".format(
+        timeit.default_timer() - start_time))
+
     self._total_negatives = np.concatenate([
         self._index_segment(i) for i in range(self._num_users)])
+
 
     tf.logging.info("Negative total vector built. Time: {:.1f} seconds".format(
         timeit.default_timer() - start_time))

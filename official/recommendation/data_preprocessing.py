@@ -219,6 +219,8 @@ def instantiate_pipeline(dataset, data_dir, params, constructor_type=None,
     raise ValueError("Expected to find {} items, but found {}".format(
         num_items, len(item_map)))
 
+  tf.logging.info("_T_ num_users: {}, num_items: {}".format(num_users, num_items))
+
   producer = data_pipeline.get_constructor(constructor_type or "materialized")(
       maximum_number_epochs=params["train_epochs"],
       num_users=num_users,

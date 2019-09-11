@@ -266,7 +266,7 @@ def run_ncf(_):
     benchmark_logger.log_evaluation_result(eval_results)
     # Log the HR and NDCG results.
     tf.logging.info(
-        "Iteration {}: HR = {:.4f}, NDCG = {:.4f}, Loss = {:.4f}".format(
+        "Iteration {}: HR = {:.4f}, NDCG = {:.4f}, eval_Loss = {:.4f}".format(
             cycle_index + 1, hr, ndcg, loss))
 
     # If some evaluation threshold is met

@@ -72,10 +72,10 @@ do
       --dataset ${DATASET} --hooks "" \
       ${DEVICE_FLAG} \
       --clean \
-      --train_epochs 14 \
-      --batch_size 4194304 \
+      --train_epochs 20 \
+      --batch_size 1048576 \
       --eval_batch_size 160000 \
-      --learning_rate 0.00382059 \
+      --learning_rate 0.0045 \
       --beta1 0.25 \
       --beta2 0.5 \
       --epsilon 1.0e-08 \
@@ -83,7 +83,7 @@ do
       --hr_threshold 0.635 \
       --ml_perf \
       --nouse_permutation \
-      --custom_cache_file="/tmp/transformed_4_16_correct.pkl" \
+      --custom_cache_file="/tmp/transformed_2_2_correct_py3.pkl" \
  |& tee ${RUN_LOG} \
  | grep --line-buffered  -E --regexp="(Iteration [0-9]+: HR = [0-9\.]+, NDCG = [0-9\.]+, Loss = [0-9\.]+)|(pipeline_hash)|(MLPerf time:)"
 
